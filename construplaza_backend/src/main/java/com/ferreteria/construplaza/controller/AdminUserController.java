@@ -30,7 +30,7 @@ public class AdminUserController {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstname(request.getFirstname())
                 .lastname(request.getLastname())
-                .role(Role.RECEPCIONISTA)
+                .role(Role.VENDEDOR)
                 .build();
 
         userRepository.save(user);

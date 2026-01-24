@@ -1,6 +1,8 @@
 package com.ferreteria.construplaza.entity;
 
 public enum Role {
-    RECEPCIONISTA,
-    ADMIN
+    VENDEDOR,
+    ADMIN,
+    ALMACENERO,
+    CLIENTE
 }
