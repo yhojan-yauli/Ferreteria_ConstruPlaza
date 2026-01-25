@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -10,6 +10,7 @@ import {
   InputAdornment,
   IconButton,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Email,
@@ -26,23 +27,31 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     if (!usuario || !password) {
       setError('Por favor, complete todos los campos');
+      setLoading(false);
       return;
     }
 
-    const success = login(usuario, password);
-    if (success) {
+    try {
+      await login(usuario, password);
       navigate('/ventas');
-    } else {
-      setError('Usuario o contraseña incorrectos');
+    } catch (err: any) {
+      // Mostrar el mensaje de error específico del backend
+      const errorMessage = err?.message || 'Error al conectar con el servidor. Por favor, intenta nuevamente.';
+      setError(errorMessage);
+      console.error('Error completo en login:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -194,6 +203,7 @@ const Login: React.FC = () => {
                 variant="contained"
                 fullWidth
                 size="large"
+                disabled={loading}
                 sx={{
                   py: 1.5,
                   bgcolor: 'primary.main',
@@ -202,22 +212,9 @@ const Login: React.FC = () => {
                   },
                 }}
               >
-                INGRESAR
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'INGRESAR'}
               </Button>
             </form>
-
-            <Typography
-              variant="body2"
-              sx={{ textAlign: 'center', mt: 3, color: 'text.secondary' }}
-            >
-              ¿Eres nuevo empleado?{' '}
-              <Link
-                to="/registro"
-                style={{ color: '#1e3a5f', fontWeight: 600, textDecoration: 'none' }}
-              >
-                Regístrate aquí
-              </Link>
-            </Typography>
           </CardContent>
         </Card>
       </Box>
