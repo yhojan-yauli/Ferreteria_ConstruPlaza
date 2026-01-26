@@ -36,7 +36,7 @@ const Ajustes: React.FC = () => {
       <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: 'primary.main' }}>
         Ajustes del Sistema
       </Typography>
-      <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+      <Typography  variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
         Configuración general del sistema Construplaza
       </Typography>
 

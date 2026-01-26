@@ -25,6 +25,7 @@ import {
   Settings,
   Logout,
   Handyman,
+  People,
 } from '@mui/icons-material';
 import { useAuth } from '@/context/AuthContext';
 
@@ -51,11 +52,12 @@ const DashboardLayout: React.FC = () => {
     { text: 'Ventas', icon: <ShoppingCart />, path: '/ventas', roles: ['ADMIN', 'VENDEDOR'] },
     { text: 'Inventario', icon: <Inventory />, path: '/inventario', roles: ['ADMIN', 'VENDEDOR'] },
     { text: 'Reportes', icon: <BarChart />, path: '/reportes', roles: ['ADMIN'] },
+    { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['ADMIN'] },
     { text: 'Ajustes', icon: <Settings />, path: '/ajustes', roles: ['ADMIN'] },
   ];
 
   const filteredMenuItems = menuItems.filter(
-    (item) => user && item.roles.includes(user.rol)
+    (item) => user && item.roles.includes(user.role)
   );
 
   const drawer = (
@@ -178,10 +180,10 @@ const DashboardLayout: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ textAlign: 'right' }}>
               <Typography variant="subtitle2" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                Hola, {user?.nombre}
+                Hola, {user?.firstname || user?.username}
               </Typography>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {user?.rol === 'ADMIN' ? 'Administrador' : 'Vendedor'}
+                {user?.role === 'ADMIN' ? 'Administrador' : user?.role === 'VENDEDOR' ? 'Vendedor' : user?.role}
               </Typography>
             </Box>
             <Avatar
@@ -191,7 +193,7 @@ const DashboardLayout: React.FC = () => {
                 height: 40,
               }}
             >
-              {user?.nombre.charAt(0).toUpperCase()}
+              {(user?.firstname || user?.username || 'U').charAt(0).toUpperCase()}
             </Avatar>
           </Box>
         </Toolbar>
