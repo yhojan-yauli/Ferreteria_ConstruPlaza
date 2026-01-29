@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-// ... existing code ...
 import org.springframework.security.core.AuthenticationException;
 
 @Service
@@ -40,4 +39,4 @@ public class AuthService {
                 .build();
     }
 }
-// ... existing code ...
+
