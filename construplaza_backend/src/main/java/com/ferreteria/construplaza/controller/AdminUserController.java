@@ -24,13 +24,18 @@ public class AdminUserController {
     @PostMapping("/crear")
     public String crearVendedor(@RequestBody CrearUsuarioRequest request) {
 
+        // Evitar duplicados
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new RuntimeException("El usuario ya existe");
+        }
+
         User user;
         user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstname(request.getFirstname())
                 .lastname(request.getLastname())
-                .role(Role.VENDEDOR)
+                .role(request.getRole())
                 .build();
 
         userRepository.save(user);
