@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.AuthenticationException;
 
 @Service
 @RequiredArgsConstructor
@@ -17,16 +18,19 @@ public class AuthService {
     private final JwtService jwtService;
 
     public AuthResponse login(LoginRequest request) {
-
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getUsername(),
+                            request.getPassword()
+                    )
+            );
+        } catch (AuthenticationException e) {
+            throw new RuntimeException("Credenciales inválidas", e);
+        }
 
         UserDetails user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow();
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         String token = jwtService.generateToken(user);
 
@@ -35,3 +39,4 @@ public class AuthService {
                 .build();
     }
 }
+

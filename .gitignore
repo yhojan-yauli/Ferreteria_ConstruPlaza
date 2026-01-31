@@ -4,6 +4,7 @@ dist/
 dist-ssr/
 build/
 *.jar
+.cursor/
 
 # Logs
 logs
