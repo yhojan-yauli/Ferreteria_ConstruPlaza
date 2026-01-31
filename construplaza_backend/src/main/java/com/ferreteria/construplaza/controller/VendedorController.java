@@ -1,6 +1,7 @@
 package com.ferreteria.construplaza.controller;
 
 import com.ferreteria.construplaza.controller.DTO.VentaRequest;
+import com.ferreteria.construplaza.controller.DTO.VentaResponse;
 import com.ferreteria.construplaza.entity.Cliente;
 import com.ferreteria.construplaza.entity.Producto;
 import com.ferreteria.construplaza.entity.User;
@@ -50,11 +51,12 @@ public class VendedorController {
 
     // 🧾 Crear venta
     @PostMapping("/venta")
-    public Venta registrarVenta(@RequestBody VentaRequest request) {
-
+    public ResponseEntity<VentaResponse> registrarVenta(@RequestBody VentaRequest request) {
         User vendedor = obtenerUsuarioAutenticado();
-        return ventaService.registrarVenta(request, vendedor);
+        VentaResponse response = ventaService.registrarVenta(request, vendedor);
+        return ResponseEntity.ok(response);
     }
+
 
     // 📊 Ver MIS ventas
     @GetMapping("/mis-ventas")

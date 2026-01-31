@@ -1,7 +1,6 @@
 package com.ferreteria.construplaza.service;
 
-import com.ferreteria.construplaza.controller.DTO.DetalleVentaRequest;
-import com.ferreteria.construplaza.controller.DTO.VentaRequest;
+import com.ferreteria.construplaza.controller.DTO.*;
 import com.ferreteria.construplaza.entity.*;
 import com.ferreteria.construplaza.repository.ClienteRepository;
 import com.ferreteria.construplaza.repository.DetalleVentaRepository;
@@ -24,7 +23,7 @@ public class VentaService {
     private final ClienteRepository clienteRepository;
 
     // 🔹 REGISTRAR VENTA
-    public Venta registrarVenta(VentaRequest request, User vendedor) {
+    public VentaResponse registrarVenta(VentaRequest request, User vendedor) {
 
         if (request.getDetalles().isEmpty()) {
             throw new RuntimeException("La venta no puede estar vacía");
@@ -61,6 +60,9 @@ public class VentaService {
 
         BigDecimal totalGravado = BigDecimal.ZERO;
 
+
+
+
         for (DetalleVentaRequest d : request.getDetalles()) {
 
             Producto producto = productoRepository.findById(d.getIdProducto())
@@ -89,6 +91,9 @@ public class VentaService {
             totalGravado = totalGravado.add(subtotal);
         }
 
+
+
+
         BigDecimal igv = totalGravado.multiply(new BigDecimal("0.18"));
         BigDecimal total = totalGravado.add(igv);
 
@@ -97,8 +102,49 @@ public class VentaService {
         venta.setTotal(total);
         venta.setVuelto(request.getMontoPagado().subtract(total));
 
-        return ventaRepository.save(venta);
+
+
+        // ==================================================
+        // 🔴 CAMBIO CLAVE: CONSTRUIR DTO (NO ENTIDAD)
+        // ==================================================
+        return VentaResponse.builder()
+                .idVenta(venta.getIdVenta())
+                .fechaEmision(venta.getFechaEmision())
+                .tipoComprobante(venta.getTipoComprobante().name())
+                .serie(venta.getSerie())
+                .numero(venta.getNumero())
+                .totalGravado(venta.getTotalGravado())
+                .igv(venta.getIgv())
+                .total(venta.getTotal())
+                .metodoPago(venta.getMetodoPago().name())
+                .montoPagado(venta.getMontoPagado())
+                .vuelto(venta.getVuelto())
+
+                // 👤 SOLO DATOS NECESARIOS DEL VENDEDOR
+                .vendedor(
+                        VendedorDTO.builder()
+                                .id(vendedor.getId())
+                                .username(vendedor.getUsername())
+                                .firstname(vendedor.getFirstname())
+                                .lastname(vendedor.getLastname())
+                                .build()
+                )
+
+                // 👥 CLIENTE (PUEDE SER NULL)
+                .cliente(
+                        venta.getCliente() == null ? null :
+                                ClienteDTO.builder()
+                                        .idCliente(venta.getCliente().getIdCliente())
+                                        .tipoDocumento(venta.getCliente().getTipoDocumento())
+                                        .numeroDocumento(venta.getCliente().getNumeroDocumento())
+                                        .nombres(venta.getCliente().getNombres())
+                                        .razonSocial(venta.getCliente().getRazonSocial())
+                                        .direccion(venta.getCliente().getDireccion())
+                                        .build()
+                )
+                .build();
     }
+
 
     // 🔹 VENTAS POR VENDEDOR
     public List<Venta> ventasPorVendedor(Integer vendedorId) {
