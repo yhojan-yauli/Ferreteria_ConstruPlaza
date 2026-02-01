@@ -22,6 +22,31 @@ export interface CreateUserRequest {
   password: string;
   firstname: string;
   lastname: string;
+  role: 'VENDEDOR' | 'ALMACENERO';
+}
+
+export interface Cliente {
+  id: number;
+  nombre: string;
+  apellido: string;
+  tipoDocumento: 'DNI' | 'RUC';
+  numeroDocumento: string;
+  direccion: string;
+  telefono: string;
+  email: string;
+  tipoCliente: 'PERSONA' | 'EMPRESA';
+  fechaRegistro: string;
+}
+
+export interface CreateClienteRequest {
+  nombre: string;
+  apellido: string;
+  tipoDocumento: 'DNI' | 'RUC';
+  numeroDocumento: string;
+  direccion: string;
+  telefono: string;
+  email: string;
+  tipoCliente: 'PERSONA' | 'EMPRESA';
 }
 
 // Función helper para obtener el token del localStorage

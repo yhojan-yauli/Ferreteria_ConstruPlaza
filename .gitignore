@@ -5,6 +5,7 @@ dist-ssr/
 build/
 *.jar
 .cursor/
+.agents/
 
 # Logs
 logs
@@ -30,3 +31,4 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+knowledge.md

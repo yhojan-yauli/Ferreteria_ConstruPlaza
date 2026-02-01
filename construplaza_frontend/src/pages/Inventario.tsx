@@ -36,9 +36,13 @@ import {
   Warning,
 } from '@mui/icons-material';
 import { productos, categorias, Producto } from '@/data/mockData';
+import { useAuth } from '@/context/AuthContext';
 import Swal from 'sweetalert2';
 
 const Inventario: React.FC = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+  
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('Todos');
   const [productosState, setProductosState] = useState(productos);
@@ -215,21 +219,23 @@ const Inventario: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={3}>
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={<Add />}
-                onClick={() => setOpenDialog(true)}
-                sx={{
-                  py: 1.5,
-                  bgcolor: 'primary.main',
-                  '&:hover': { bgcolor: 'primary.dark' },
-                }}
-              >
-                + NUEVO INGRESO
-              </Button>
-            </Grid>
+            {isAdmin && (
+              <Grid item xs={12} md={3}>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  startIcon={<Add />}
+                  onClick={() => setOpenDialog(true)}
+                  sx={{
+                    py: 1.5,
+                    bgcolor: 'primary.main',
+                    '&:hover': { bgcolor: 'primary.dark' },
+                  }}
+                >
+                  + NUEVO INGRESO
+                </Button>
+              </Grid>
+            )}
           </Grid>
         </CardContent>
       </Card>
@@ -306,20 +312,28 @@ const Inventario: React.FC = () => {
                     <Switch defaultChecked={producto.stock > 0} color="primary" />
                   </TableCell>
                   <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(producto)}
-                      sx={{ color: 'primary.main' }}
-                    >
-                      <Edit fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(producto.id)}
-                      sx={{ color: 'error.main' }}
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
+                    {isAdmin ? (
+                      <>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(producto)}
+                          sx={{ color: 'primary.main' }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(producto.id)}
+                          sx={{ color: 'error.main' }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Solo lectura
+                      </Typography>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

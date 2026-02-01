@@ -22,6 +22,10 @@ import {
   InputAdornment,
   CircularProgress,
   Chip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   PersonAdd,
@@ -32,6 +36,7 @@ import {
   Badge,
   Lock,
 } from '@mui/icons-material';
+
 import { useAuth } from '@/context/AuthContext';
 import { userAPI, type User, type CreateUserRequest } from '@/services/api';
 import Swal from 'sweetalert2';
@@ -50,6 +55,7 @@ const GestionUsuarios: React.FC = () => {
     password: '',
     firstname: '',
     lastname: '',
+    role: 'VENDEDOR',
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -85,6 +91,7 @@ const GestionUsuarios: React.FC = () => {
       password: '',
       firstname: '',
       lastname: '',
+      role: 'VENDEDOR',
     });
   };
 
@@ -97,6 +104,7 @@ const GestionUsuarios: React.FC = () => {
       password: '',
       firstname: '',
       lastname: '',
+      role: 'VENDEDOR',
     });
   };
 
@@ -343,8 +351,20 @@ const GestionUsuarios: React.FC = () => {
                 }}
               />
 
+              <FormControl fullWidth>
+                <InputLabel>Rol del Usuario</InputLabel>
+                <Select
+                  name="role"
+                  value={formData.role}
+                  label="Rol del Usuario"
+                  onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value as 'VENDEDOR' | 'ALMACENERO' }))}
+                >
+                  <MenuItem value="VENDEDOR">Vendedor</MenuItem>
+                </Select>
+              </FormControl>
+
               <Alert severity="info" sx={{ mt: 1 }}>
-                Los nuevos usuarios se crearán con el rol de <strong>Vendedor</strong> por defecto.
+                El usuario será creado con el rol de <strong>{formData.role === 'VENDEDOR' ? 'Vendedor' : 'Almacenero'}</strong>.
               </Alert>
             </Box>
           </DialogContent>
