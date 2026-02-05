@@ -26,6 +26,8 @@ import {
   Logout,
   Handyman,
   People,
+  PersonSearch,
+  History,
 } from '@mui/icons-material';
 import { useAuth } from '@/context/AuthContext';
 
@@ -51,6 +53,8 @@ const DashboardLayout: React.FC = () => {
   const menuItems = [
     { text: 'Ventas', icon: <ShoppingCart />, path: '/ventas', roles: ['ADMIN', 'VENDEDOR'] },
     { text: 'Inventario', icon: <Inventory />, path: '/inventario', roles: ['ADMIN', 'VENDEDOR'] },
+    { text: 'Clientes', icon: <PersonSearch />, path: '/clientes', roles: ['ADMIN', 'VENDEDOR'] },
+    { text: 'Historial', icon: <History />, path: '/historial', roles: ['ADMIN'] },
     { text: 'Reportes', icon: <BarChart />, path: '/reportes', roles: ['ADMIN'] },
     { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['ADMIN'] },
     { text: 'Ajustes', icon: <Settings />, path: '/ajustes', roles: ['ADMIN'] },

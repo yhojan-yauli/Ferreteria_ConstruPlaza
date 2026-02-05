@@ -12,6 +12,8 @@ import Inventario from "./pages/Inventario";
 import Reportes from "./pages/Reportes";
 import Ajustes from "./pages/Ajustes";
 import GestionUsuarios from "./pages/GestionUsuarios";
+import Clientes from "./pages/Clientes";
+import HistorialAcciones from "./pages/HistorialAcciones";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,15 @@ const App = () => (
                 <Route index element={<Navigate to="/ventas" replace />} />
                 <Route path="ventas" element={<Ventas />} />
                 <Route path="inventario" element={<Inventario />} />
+                <Route path="clientes" element={<Clientes />} />
+                <Route
+                  path="historial"
+                  element={
+                    <ProtectedRoute requiredRole="ADMIN">
+                      <HistorialAcciones />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="reportes"
                   element={
