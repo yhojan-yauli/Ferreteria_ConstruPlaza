@@ -1,6 +1,6 @@
 package com.ferreteria.construplaza.service;
 
-import com.ferreteria.construplaza.entity.Categoria;
+import com.ferreteria.construplaza.entity.*;
 import com.ferreteria.construplaza.repository.CategoriaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -9,46 +9,81 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-
+@RequiredArgsConstructor
 public class CategoriaService {
 
     private final CategoriaRepository categoriaRepository;
+    private final HistorialAccionService historialAccionService;
 
-    public CategoriaService(CategoriaRepository categoriaRepository) {
-        this.categoriaRepository = categoriaRepository;
-    }
 
-    // Listar todas las categorías
+    // 📋 Listar todas (NO lleva historial)
     public List<Categoria> listarTodas() {
         return categoriaRepository.findAll();
     }
 
-    // Crear una nueva categoría
-    public Categoria crear(Categoria categoria) {
-        // Validar que no exista otra categoría con el mismo nombre
-        Optional<Categoria> existente = categoriaRepository.findByNombre(categoria.getNombre());
+    // ➕ Crear categoría
+    public Categoria crear(Categoria categoria, User usuario) {
+
+        Optional<Categoria> existente =
+                categoriaRepository.findByNombre(categoria.getNombre());
+
         if (existente.isPresent()) {
             throw new IllegalArgumentException("Ya existe una categoría con ese nombre");
         }
-        return categoriaRepository.save(categoria);
+
+        Categoria guardada = categoriaRepository.save(categoria);
+
+        historialAccionService.registrar(
+                usuario,
+                TipoAccion.CREAR,
+                TipoEntidad.CATEGORIA,
+                "Categoría creada ID: " + guardada.getIdCategoria(),
+                guardada
+        );
+
+        return guardada;
     }
 
-    // Actualizar una categoría existente
-    public Categoria actualizar(Integer id, Categoria categoria) {
-        Categoria existente = categoriaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada con ID: " + id));
+    // ✏️ Actualizar categoría
+    public Categoria actualizar(Integer id, Categoria categoria, User usuario) {
 
-        // Actualizar campos
+        Categoria existente = categoriaRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Categoría no encontrada con ID: " + id)
+                );
+
         existente.setNombre(categoria.getNombre());
         existente.setDescripcion(categoria.getDescripcion());
 
-        return categoriaRepository.save(existente);
+        Categoria actualizada = categoriaRepository.save(existente);
+
+        historialAccionService.registrar(
+                usuario,
+                TipoAccion.EDITAR,
+                TipoEntidad.CATEGORIA,
+                "Categoría editada ID: " + actualizada.getIdCategoria(),
+                actualizada
+        );
+
+        return actualizada;
     }
 
-    // Eliminar una categoría por ID
-    public void eliminar(Integer id) {
+    // ❌ Eliminar categoría
+    public void eliminar(Integer id, User usuario) {
+
         Categoria existente = categoriaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada con ID: " + id));
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Categoría no encontrada con ID: " + id)
+                );
+
         categoriaRepository.delete(existente);
+
+        historialAccionService.registrar(
+                usuario,
+                TipoAccion.ELIMINAR,
+                TipoEntidad.CATEGORIA,
+                "Categoría eliminada ID: " + id,
+                existente
+        );
     }
 }

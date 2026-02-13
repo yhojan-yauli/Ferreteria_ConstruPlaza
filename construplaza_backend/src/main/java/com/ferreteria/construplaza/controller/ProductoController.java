@@ -2,8 +2,11 @@ package com.ferreteria.construplaza.controller;
 
 
 import com.ferreteria.construplaza.entity.Producto;
+import com.ferreteria.construplaza.entity.User;
+import com.ferreteria.construplaza.repository.UserRepository;
 import com.ferreteria.construplaza.service.ProductoService;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,9 +16,21 @@ import java.util.List;
 public class ProductoController {
 
     private final ProductoService productoService;
+    private final UserRepository userRepository;
 
-    public ProductoController(ProductoService productoService) {
+
+    public ProductoController(ProductoService productoService, UserRepository userRepository) {
         this.productoService = productoService;
+        this.userRepository = userRepository;
+    }
+    private User obtenerUsuarioAutenticado() {
+        String username = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
     }
 
     // Buscar por SKU
@@ -58,21 +73,24 @@ public class ProductoController {
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
     public Producto crear(@RequestBody Producto producto) {
-        return productoService.crear(producto);
+        User usuario = obtenerUsuarioAutenticado();
+        return productoService.crear(producto,usuario);
     }
 
     // Actualizar producto (solo ADMIN)
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
     public Producto actualizar(@PathVariable Integer id, @RequestBody Producto producto) {
-        return productoService.actualizar(id, producto);
+        User usuario = obtenerUsuarioAutenticado();
+        return productoService.actualizar(id, producto,usuario);
     }
 
     // Eliminar producto (solo ADMIN)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
     public void eliminar(@PathVariable Integer id) {
-        productoService.eliminar(id);
+        User usuario = obtenerUsuarioAutenticado();
+        productoService.eliminar(id,usuario);
     }
 
     // Buscar productos por nombre

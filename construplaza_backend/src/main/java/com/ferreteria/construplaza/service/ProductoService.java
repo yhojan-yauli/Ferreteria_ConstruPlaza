@@ -1,7 +1,6 @@
 package com.ferreteria.construplaza.service;
 
-import com.ferreteria.construplaza.entity.Categoria;
-import com.ferreteria.construplaza.entity.Producto;
+import com.ferreteria.construplaza.entity.*;
 import com.ferreteria.construplaza.repository.CategoriaRepository;
 import com.ferreteria.construplaza.repository.ProductoRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,60 +10,86 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Service
-
+@RequiredArgsConstructor
 public class ProductoService {
 
     private final ProductoRepository productoRepository;
     private final CategoriaRepository categoriaRepository;
+    private final HistorialAccionService historialAccionService;
 
-    public ProductoService(ProductoRepository productoRepository, CategoriaRepository categoriaRepository) {
-        this.productoRepository = productoRepository;
-        this.categoriaRepository = categoriaRepository;
-    }
+    // ===============================
+    // 🔎 MÉTODOS DE CONSULTA (SIN HISTORIAL)
+    // ===============================
 
-
-    // Buscar por SKU
     public Producto buscarPorSku(String sku) {
         return productoRepository.findBySkuAndEstadoTrue(sku);
     }
 
-    // Buscar por marca
     public List<Producto> buscarPorMarca(String marca) {
         return productoRepository.findByMarcaContainingIgnoreCaseAndEstadoTrue(marca);
     }
 
-    // Buscar por categoría
     public List<Producto> buscarPorCategoria(String categoriaNombre) {
         return productoRepository.findByCategoriaNombreIgnoreCaseAndEstadoTrue(categoriaNombre);
     }
-    //________________
-     //_______________
 
-    // Listar todos los productos activos
     public List<Producto> listarActivos() {
         return productoRepository.findByEstadoTrue();
     }
 
-    // Buscar producto por ID
     public Producto buscarPorId(Integer id) {
         return productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
     }
 
-    // Crear producto
-    public Producto crear(Producto producto) {
-
-        if (producto.getCategoria() != null && producto.getCategoria().getIdCategoria() != null) {
-            Categoria cat = categoriaRepository.findById(producto.getCategoria().getIdCategoria())
-                    .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
-            producto.setCategoria(cat);
-        }
-        return productoRepository.save(producto);
+    public List<Producto> buscarPorNombre(String nombre) {
+        return productoRepository.findByNombreContainingIgnoreCaseAndEstadoTrue(nombre);
     }
 
-    // Actualizar producto
-    public Producto actualizar(Integer id, Producto producto) {
+    public List<Producto> alertaStock() {
+        return productoRepository
+                .findByStockActualLessThanEqualAndEstadoTrue(BigDecimal.valueOf(10));
+    }
+
+    // ===============================
+    // ➕ CREAR PRODUCTO
+    // ===============================
+
+    public Producto crear(Producto producto, User usuario) {
+
+        if (producto.getCategoria() != null &&
+                producto.getCategoria().getIdCategoria() != null) {
+
+            Categoria cat = categoriaRepository
+                    .findById(producto.getCategoria().getIdCategoria())
+                    .orElseThrow(() ->
+                            new RuntimeException("Categoría no encontrada")
+                    );
+
+            producto.setCategoria(cat);
+        }
+
+        Producto guardado = productoRepository.save(producto);
+
+        historialAccionService.registrar(
+                usuario,
+                TipoAccion.CREAR,
+                TipoEntidad.PRODUCTO,
+                "Producto creado ID: " + guardado.getIdProducto(),
+                guardado
+        );
+
+        return guardado;
+    }
+
+    // ===============================
+    // ✏️ ACTUALIZAR PRODUCTO
+    // ===============================
+
+    public Producto actualizar(Integer id, Producto producto, User usuario) {
+
         Producto p = buscarPorId(id);
+
         p.setNombre(producto.getNombre());
         p.setSku(producto.getSku());
         p.setMarca(producto.getMarca());
@@ -77,23 +102,37 @@ public class ProductoService {
         p.setCategoria(producto.getCategoria());
         p.setImagenUrl(producto.getImagenUrl());
         p.setEstado(producto.getEstado());
-        return productoRepository.save(p);
+
+        Producto actualizado = productoRepository.save(p);
+
+        historialAccionService.registrar(
+                usuario,
+                TipoAccion.EDITAR,
+                TipoEntidad.PRODUCTO,
+                "Producto editado ID: " + actualizado.getIdProducto(),
+                actualizado
+        );
+
+        return actualizado;
     }
 
-    // Eliminar producto (solo cambia estado)
-    public void eliminar(Integer id) {
+    // ===============================
+    // ❌ ELIMINAR PRODUCTO (LÓGICO)
+    // ===============================
+
+    public void eliminar(Integer id, User usuario) {
+
         Producto p = buscarPorId(id);
+
         p.setEstado(false);
         productoRepository.save(p);
-    }
 
-    // Buscar por nombre
-    public List<Producto> buscarPorNombre(String nombre) {
-        return productoRepository.findByNombreContainingIgnoreCaseAndEstadoTrue(nombre);
-    }
-
-    // Productos con stock bajo
-    public List<Producto> alertaStock() {
-        return productoRepository.findByStockActualLessThanEqualAndEstadoTrue(BigDecimal.valueOf(10)); // ejemplo: stockMinimo 10
+        historialAccionService.registrar(
+                usuario,
+                TipoAccion.ELIMINAR,
+                TipoEntidad.PRODUCTO,
+                "Producto eliminado ID: " + id,
+                p
+        );
     }
 }

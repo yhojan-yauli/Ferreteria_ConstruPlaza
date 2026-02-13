@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +22,13 @@ public class VentaService {
     private final DetalleVentaRepository detalleVentaRepository;
     private final ProductoRepository productoRepository;
     private final ClienteRepository clienteRepository;
+    private final HistorialAccionService historialAccionService;
+
+
+
+
+
+
 
     // 🔹 REGISTRAR VENTA
     public VentaResponse registrarVenta(VentaRequest request, User vendedor) {
@@ -101,6 +109,24 @@ public class VentaService {
         venta.setIgv(igv);
         venta.setTotal(total);
         venta.setVuelto(request.getMontoPagado().subtract(total));
+
+
+        // =======================================
+// 🧾 REGISTRO EN HISTORIAL DE ACCIONES
+// =======================================
+        historialAccionService.registrar(
+                vendedor,
+                TipoAccion.CREAR_VENTA,
+                TipoEntidad.VENTA,
+                "Venta realizada tipo " + venta.getTipoComprobante(),
+                Map.of(
+                        "idVenta", venta.getIdVenta(),
+                        "tipoComprobante", venta.getTipoComprobante(),
+                        "serie", venta.getSerie(),
+                        "numero", venta.getNumero(),
+                        "total", venta.getTotal()
+                )
+        );
 
 
 

@@ -1,11 +1,16 @@
 package com.ferreteria.construplaza.controller.DTO;
 
 import com.ferreteria.construplaza.entity.Cliente;
+import com.ferreteria.construplaza.entity.User;
 import com.ferreteria.construplaza.repository.ClienteRepository;
+import com.ferreteria.construplaza.repository.UserRepository;
+import com.ferreteria.construplaza.service.ClienteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -15,9 +20,11 @@ import java.util.List;
 @RequestMapping("/construplaza/vendedor/clientes")
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyAuthority('ADMIN','VENDEDOR')")
-public class ClienteController {
+public class    ClienteController {
 
+    private final ClienteService clienteService;
     private final ClienteRepository clienteRepository;
+    private final UserRepository userRepository;
 
     // 🔎 Listar clientes (NO anónimos)
     @GetMapping
@@ -41,43 +48,50 @@ public class ClienteController {
                 );
     }
 
-
-
-    // ➕ Registrar cliente
+    // ➕ Registrar cliente (CON HISTORIAL)
     @PostMapping
-    public Cliente registrarCliente(@RequestBody Cliente cliente) {
+    public Cliente registrarCliente(@RequestBody ClienteRequest clienteRequest) {
 
-        cliente.setAnonimo(false); // aseguramos
-        return clienteRepository.save(cliente);
+        Cliente cliente = Cliente.builder()
+                .tipoDocumento(clienteRequest.getTipoDocumento())
+                .numeroDocumento(clienteRequest.getNumeroDocumento())
+                .nombres(clienteRequest.getNombres())
+                .razonSocial(clienteRequest.getRazonSocial())
+                .direccion(clienteRequest.getDireccion())
+                .anonimo(false)
+                .build();
+
+        User usuario = obtenerUsuarioAutenticado();
+        return clienteService.crearCliente(cliente, usuario);
     }
 
-    // ✏️ Editar cliente
+    // ✏️ Editar cliente (CON HISTORIAL)
     @PutMapping("/{id}")
     public Cliente editarCliente(
             @PathVariable Integer id,
             @RequestBody Cliente datos
     ) {
-        Cliente cliente = clienteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
-
-        cliente.setTipoDocumento(datos.getTipoDocumento());
-        cliente.setNumeroDocumento(datos.getNumeroDocumento());
-        cliente.setNombres(datos.getNombres());
-        cliente.setRazonSocial(datos.getRazonSocial());
-        cliente.setDireccion(datos.getDireccion());
-
-        return clienteRepository.save(cliente);
+        User usuario = obtenerUsuarioAutenticado();
+        return clienteService.editarCliente(id, datos, usuario);
     }
 
-    // ❌ Eliminación lógica → lo volvemos anónimo
+    // ❌ Eliminación lógica → lo volvemos anónimo (CON HISTORIAL)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarCliente(@PathVariable Integer id) {
-        Cliente cliente = clienteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
-        cliente.setAnonimo(true);
-        clienteRepository.save(cliente);
+        User usuario = obtenerUsuarioAutenticado();
+        clienteService.eliminarCliente(id, usuario);
 
         return ResponseEntity.ok("Cliente marcado como anónimo");
+    }
+
+    // 🔐 Obtener usuario autenticado
+    private User obtenerUsuarioAutenticado() {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
     }
 }
