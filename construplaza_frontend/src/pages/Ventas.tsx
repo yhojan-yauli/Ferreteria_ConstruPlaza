@@ -540,9 +540,22 @@ const Ventas: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
+                          overflow: 'hidden',
                         }}
                       >
-                        <ShoppingCart sx={{ fontSize: 40, color: '#ccc' }} />
+                        {producto.imagen ? (
+                          <img
+                            src={producto.imagen}
+                            alt={producto.nombre}
+                            style={{
+                              maxHeight: '90px',
+                              maxWidth: '100%',
+                              objectFit: 'contain',
+                            }}
+                          />
+                        ) : (
+                          <ShoppingCart sx={{ fontSize: 40, color: '#ccc' }} />
+                        )}
                       </CardMedia>
                       <Chip
                         label={`${producto.stock} Stock`}

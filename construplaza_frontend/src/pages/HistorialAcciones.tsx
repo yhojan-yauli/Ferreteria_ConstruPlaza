@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -28,14 +28,64 @@ import {
   Refresh,
   History,
 } from '@mui/icons-material';
-import { historialAccionesMock, vendedoresMock, AccionVendedor } from '@/data/mockData';
+import type { AccionVendedor } from '@/data/mockData';
+import { historialAPI } from '@/services/api';
+
+interface VendedorFiltro {
+  id: number;
+  nombre: string;
+}
 
 const HistorialAcciones: React.FC = () => {
-  const [acciones] = useState<AccionVendedor[]>(historialAccionesMock);
+  const [acciones, setAcciones] = useState<AccionVendedor[]>([]);
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [vendedorFiltro, setVendedorFiltro] = useState<number | 'TODOS'>('TODOS');
   const [tipoAccionFiltro, setTipoAccionFiltro] = useState<string>('TODOS');
+  const [vendedores, setVendedores] = useState<VendedorFiltro[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const cargarHistorial = async () => {
+      setLoading(true);
+      const data = await historialAPI.listar();
+      const mapeadas: AccionVendedor[] = data.map((item) => {
+        const fechaObj = new Date(item.fechaHora);
+        const fecha = fechaObj.toISOString().slice(0, 10);
+        const hora = fechaObj.toTimeString().slice(0, 8);
+        const vendedorNombre = item.usuario
+          ? `${item.usuario.firstname} ${item.usuario.lastname}`.trim() || item.usuario.username
+          : 'Desconocido';
+        return {
+          id: item.id,
+          fecha,
+          hora,
+          vendedorId: item.usuario?.id ?? 0,
+          vendedorNombre,
+          tipoAccion: item.tipoAccion as AccionVendedor['tipoAccion'],
+          descripcion: item.descripcion,
+          detalles: item.detalle,
+        };
+      });
+      setAcciones(mapeadas);
+
+      const vendedoresUnicos: Record<number, string> = {};
+      mapeadas.forEach((a) => {
+        if (a.vendedorId && !vendedoresUnicos[a.vendedorId]) {
+          vendedoresUnicos[a.vendedorId] = a.vendedorNombre;
+        }
+      });
+      setVendedores(
+        Object.entries(vendedoresUnicos).map(([id, nombre]) => ({
+          id: Number(id),
+          nombre,
+        })),
+      );
+      setLoading(false);
+    };
+
+    cargarHistorial();
+  }, []);
 
   const accionesFiltradas = acciones.filter((accion) => {
     const matchFechaInicio = !fechaInicio || accion.fecha >= fechaInicio;
@@ -105,6 +155,16 @@ const HistorialAcciones: React.FC = () => {
         Registro de actividades realizadas por los vendedores
       </Typography>
 
+      {loading ? (
+        <Card>
+          <CardContent sx={{ py: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary">
+              Cargando historial de acciones...
+            </Typography>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
       {/* KPIs */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}>
@@ -220,7 +280,7 @@ const HistorialAcciones: React.FC = () => {
                   onChange={(e) => setVendedorFiltro(e.target.value as number | 'TODOS')}
                 >
                   <MenuItem value="TODOS">Todos los vendedores</MenuItem>
-                  {vendedoresMock.map((v) => (
+                  {vendedores.map((v) => (
                     <MenuItem key={v.id} value={v.id}>
                       {v.nombre}
                     </MenuItem>
@@ -334,6 +394,8 @@ const HistorialAcciones: React.FC = () => {
           </Typography>
         </Box>
       </Card>
+        </>
+      )}
     </Box>
   );
 };

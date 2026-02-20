@@ -70,6 +70,29 @@ export interface ClienteListResponse {
   direccion: string | null;
 }
 
+export interface HistorialAccionResponse {
+  id: number;
+  usuario: User;
+  tipoAccion: string;
+  tipoEntidad: string;
+  descripcion: string;
+  detalle: string;
+  fechaHora: string;
+}
+
+export interface VentaResumen {
+  idVenta: number;
+  fechaEmision: string;
+  tipoComprobante: string;
+  serie: string;
+  numero: string;
+  totalGravado: number;
+  igv: number;
+  total: number;
+  metodoPago: string;
+  vendedor: User;
+}
+
 // Función helper para obtener el token del localStorage
 const getToken = (): string | null => {
   return localStorage.getItem('construplaza_token');
@@ -195,6 +218,34 @@ export const clienteAPI = {
       return await response.json();
     } catch (error) {
       console.error('Error en clienteAPI:', error);
+      return [];
+    }
+  },
+};
+
+// API de Historial de Acciones (solo admin)
+export const historialAPI = {
+  listar: async (): Promise<HistorialAccionResponse[]> => {
+    try {
+      const response = await authenticatedFetch('/admin/usuarios/historial');
+      if (!response.ok) throw new Error('Error al obtener historial');
+      return await response.json();
+    } catch (error) {
+      console.error('Error en historialAPI:', error);
+      return [];
+    }
+  },
+};
+
+// API de Ventas del vendedor actual
+export const ventasAPI = {
+  misVentas: async (): Promise<VentaResumen[]> => {
+    try {
+      const response = await authenticatedFetch('/construplaza/vendedor/mis-ventas');
+      if (!response.ok) throw new Error('Error al obtener ventas');
+      return await response.json();
+    } catch (error) {
+      console.error('Error en ventasAPI:', error);
       return [];
     }
   },
