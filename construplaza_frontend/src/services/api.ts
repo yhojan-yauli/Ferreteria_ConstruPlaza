@@ -49,6 +49,27 @@ export interface CreateClienteRequest {
   tipoCliente: 'PERSONA' | 'EMPRESA';
 }
 
+export interface Producto {
+  id: number;
+  nombre: string;
+  sku: string;
+  marca: string;
+  categoria: string | null;
+  precio: number;
+  stock: number;
+  imagen: string | null;
+}
+
+/** Respuesta del backend GET /construplaza/vendedor/clientes (ClienteListDTO) */
+export interface ClienteListResponse {
+  id: number;
+  tipoDocumento: string;
+  numeroDocumento: string;
+  nombres: string | null;
+  razonSocial: string | null;
+  direccion: string | null;
+}
+
 // Función helper para obtener el token del localStorage
 const getToken = (): string | null => {
   return localStorage.getItem('construplaza_token');
@@ -148,5 +169,33 @@ export const userAPI = {
     }
 
     return response.json();
+  },
+};
+
+// API de Productos
+export const productoAPI = {
+  listarProductos: async (): Promise<Producto[]> => {
+    try {
+      const response = await authenticatedFetch('/api/productos');
+      if (!response.ok) throw new Error('Error al obtener productos');
+      return await response.json();
+    } catch (error) {
+      console.error('Error en productoAPI:', error);
+      return [];
+    }
+  },
+};
+
+// API de Clientes
+export const clienteAPI = {
+  listar: async (): Promise<ClienteListResponse[]> => {
+    try {
+      const response = await authenticatedFetch('/construplaza/vendedor/clientes');
+      if (!response.ok) throw new Error('Error al obtener clientes');
+      return await response.json();
+    } catch (error) {
+      console.error('Error en clienteAPI:', error);
+      return [];
+    }
   },
 };

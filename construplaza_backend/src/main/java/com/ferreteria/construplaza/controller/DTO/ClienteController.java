@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/construplaza/vendedor/clientes")
@@ -26,15 +27,21 @@ public class    ClienteController {
     private final ClienteRepository clienteRepository;
     private final UserRepository userRepository;
 
-    // 🔎 Listar clientes (NO anónimos)
+    // 🔎 Listar clientes (NO anónimos) - DTO para frontend
     @GetMapping
-    public ResponseEntity<?> listarClientes() {
+    public ResponseEntity<List<ClienteListDTO>> listarClientes() {
         List<Cliente> clientes = clienteRepository.findByAnonimoFalse();
-
-        if (clientes.isEmpty()) {
-            return ResponseEntity.ok("No hay clientes registrados");
-        }
-        return ResponseEntity.ok(clientes);
+        List<ClienteListDTO> dtos = clientes.stream()
+                .map(c -> ClienteListDTO.builder()
+                        .id(c.getIdCliente())
+                        .tipoDocumento(c.getTipoDocumento())
+                        .numeroDocumento(c.getNumeroDocumento())
+                        .nombres(c.getNombres())
+                        .razonSocial(c.getRazonSocial())
+                        .direccion(c.getDireccion())
+                        .build())
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     // 🔍 Buscar por número de documento

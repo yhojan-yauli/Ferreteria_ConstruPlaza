@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Grid,
@@ -34,7 +34,8 @@ import {
   PersonAdd,
   Close,
 } from '@mui/icons-material';
-import { productos, categorias, Producto } from '@/data/mockData';
+import { categorias } from '@/data/mockData';
+import { Producto, productoAPI } from '@/services/api';
 import Swal from 'sweetalert2';
 
 interface CartItem extends Producto {
@@ -60,6 +61,7 @@ const clienteInicial: ClienteVenta = {
 };
 
 const Ventas: React.FC = () => {
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [carrito, setCarrito] = useState<CartItem[]>([]);
@@ -67,10 +69,18 @@ const Ventas: React.FC = () => {
   const [dialogCliente, setDialogCliente] = useState(false);
   const [clienteData, setClienteData] = useState<ClienteVenta>(clienteInicial);
 
+  useEffect(() => {
+    const cargarDatos = async () => {
+      const datosReales = await productoAPI.listarProductos();
+      setProductos(datosReales);
+    };
+    cargarDatos();
+  }, []);
+
   const productosFiltrados = productos.filter((p) => {
     const matchBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      p.sku.toLowerCase().includes(busqueda.toLowerCase());
-    const matchCategoria = categoriaActiva === 'Todos' || p.categoria === categoriaActiva;
+      (p.sku ?? '').toLowerCase().includes(busqueda.toLowerCase());
+    const matchCategoria = categoriaActiva === 'Todos' || (p.categoria ?? '') === categoriaActiva;
     return matchBusqueda && matchCategoria;
   });
 
