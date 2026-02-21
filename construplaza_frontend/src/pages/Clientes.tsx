@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -37,20 +37,51 @@ import {
   Email,
   LocationOn,
 } from '@mui/icons-material';
-import { clientesMock, Cliente } from '@/data/mockData';
+import {
+  Cliente,
+  ClienteListResponse,
+  clienteAPI,
+} from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import Swal from 'sweetalert2';
+
+function mapClienteListToCliente(item: ClienteListResponse): Cliente {
+  const tieneRazonSocial = !!item.razonSocial?.trim();
+  return {
+    id: item.id,
+    nombre: item.nombres ?? '',
+    apellido: item.razonSocial ?? '—',
+    tipoDocumento: (item.tipoDocumento === 'RUC' ? 'RUC' : 'DNI') as 'DNI' | 'RUC',
+    numeroDocumento: item.numeroDocumento ?? '',
+    direccion: item.direccion ?? '—',
+    telefono: '—',
+    email: '—',
+    tipoCliente: tieneRazonSocial ? 'EMPRESA' : 'PERSONA',
+    fechaRegistro: '—',
+  };
+}
 
 const Clientes: React.FC = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
-  
+
   const [busqueda, setBusqueda] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState<'TODOS' | 'PERSONA' | 'EMPRESA'>('TODOS');
-  const [clientesState, setClientesState] = useState<Cliente[]>(clientesMock);
+  const [clientesState, setClientesState] = useState<Cliente[]>([]);
+  const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
-  
+
+  useEffect(() => {
+    const cargarDatos = async () => {
+      setLoading(true);
+      const datosReales = await clienteAPI.listar();
+      setClientesState(datosReales.map(mapClienteListToCliente));
+      setLoading(false);
+    };
+    cargarDatos();
+  }, []);
+
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -67,7 +98,7 @@ const Clientes: React.FC = () => {
       c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       c.apellido.toLowerCase().includes(busqueda.toLowerCase()) ||
       c.numeroDocumento.includes(busqueda) ||
-      c.email.toLowerCase().includes(busqueda.toLowerCase());
+      (c.email ?? '').toLowerCase().includes(busqueda.toLowerCase());
     const matchTipo = tipoFiltro === 'TODOS' || c.tipoCliente === tipoFiltro;
     return matchBusqueda && matchTipo;
   });
@@ -117,7 +148,7 @@ const Clientes: React.FC = () => {
         ...prev,
         [name]: value,
       }));
-      
+
       if (name === 'tipoCliente') {
         setFormData((prev) => ({
           ...prev,
@@ -201,6 +232,16 @@ const Clientes: React.FC = () => {
         Administra los clientes de Construplaza
       </Typography>
 
+      {loading ? (
+        <Card>
+          <CardContent sx={{ py: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary">
+              Cargando clientes desde el servidor...
+            </Typography>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
       {/* KPIs */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={4}>
@@ -414,6 +455,8 @@ const Clientes: React.FC = () => {
           </Typography>
         </Box>
       </Card>
+        </>
+      )}
 
       {/* Dialog para Crear/Editar Cliente */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>

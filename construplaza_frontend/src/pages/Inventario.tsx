@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -35,32 +35,47 @@ import {
   AttachMoney,
   Warning,
 } from '@mui/icons-material';
-import { productos, categorias, Producto } from '@/data/mockData';
+import { categorias } from '@/data/mockData';
+import { Producto, productoAPI } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import Swal from 'sweetalert2';
 
 const Inventario: React.FC = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
-  
+
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('Todos');
-  const [productosState, setProductosState] = useState(productos);
+  const [productosState, setProductosState] = useState<Producto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
+
+  useEffect(() => {
+    const cargarDatos = async () => {
+      setLoading(true);
+      const datosReales = await productoAPI.listarProductos();
+      setProductosState(datosReales);
+      setLoading(false);
+    };
+    cargarDatos();
+  }, []);
 
   const productosFiltrados = productosState.filter((p) => {
     const matchBusqueda =
       p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      p.sku.toLowerCase().includes(busqueda.toLowerCase()) ||
-      p.marca.toLowerCase().includes(busqueda.toLowerCase());
-    const matchCategoria = categoriaFiltro === 'Todos' || p.categoria === categoriaFiltro;
+      (p.sku ?? '').toLowerCase().includes(busqueda.toLowerCase()) ||
+      (p.marca ?? '').toLowerCase().includes(busqueda.toLowerCase());
+    const matchCategoria = categoriaFiltro === 'Todos' || (p.categoria ?? '') === categoriaFiltro;
     return matchBusqueda && matchCategoria;
   });
 
   const totalProductos = productosState.length;
-  const valorInventario = productosState.reduce((sum, p) => sum + p.precio * p.stock, 0);
-  const productosCriticos = productosState.filter((p) => p.stock < 10).length;
+  const valorInventario = productosState.reduce(
+    (sum, p) => sum + (p.precio ?? 0) * (p.stock ?? 0),
+    0
+  );
+  const productosCriticos = productosState.filter((p) => (p.stock ?? 0) < 10).length;
 
   const getStockChip = (stock: number) => {
     if (stock === 0) {
@@ -117,6 +132,16 @@ const Inventario: React.FC = () => {
         Control y gestión del stock de productos
       </Typography>
 
+      {loading ? (
+        <Card>
+          <CardContent sx={{ py: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary">
+              Cargando productos desde el servidor...
+            </Typography>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
       {/* KPIs */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={4}>
@@ -301,10 +326,10 @@ const Inventario: React.FC = () => {
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell>{producto.categoria}</TableCell>
+                  <TableCell>{producto.categoria ?? '—'}</TableCell>
                   <TableCell align="right">
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      S/ {producto.precio.toFixed(2)}
+                      S/ {(producto.precio ?? 0).toFixed(2)}
                     </Typography>
                   </TableCell>
                   <TableCell align="center">{getStockChip(producto.stock)}</TableCell>
@@ -346,6 +371,8 @@ const Inventario: React.FC = () => {
           </Typography>
         </Box>
       </Card>
+        </>
+      )}
 
       {/* Dialog para Editar/Agregar */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>

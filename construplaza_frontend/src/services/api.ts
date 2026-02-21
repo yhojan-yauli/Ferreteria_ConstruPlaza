@@ -49,6 +49,50 @@ export interface CreateClienteRequest {
   tipoCliente: 'PERSONA' | 'EMPRESA';
 }
 
+export interface Producto {
+  id: number;
+  nombre: string;
+  sku: string;
+  marca: string;
+  categoria: string | null;
+  precio: number;
+  stock: number;
+  imagen: string | null;
+}
+
+/** Respuesta del backend GET /construplaza/vendedor/clientes (ClienteListDTO) */
+export interface ClienteListResponse {
+  id: number;
+  tipoDocumento: string;
+  numeroDocumento: string;
+  nombres: string | null;
+  razonSocial: string | null;
+  direccion: string | null;
+}
+
+export interface HistorialAccionResponse {
+  id: number;
+  usuario: User;
+  tipoAccion: string;
+  tipoEntidad: string;
+  descripcion: string;
+  detalle: string;
+  fechaHora: string;
+}
+
+export interface VentaResumen {
+  idVenta: number;
+  fechaEmision: string;
+  tipoComprobante: string;
+  serie: string;
+  numero: string;
+  totalGravado: number;
+  igv: number;
+  total: number;
+  metodoPago: string;
+  vendedor: User;
+}
+
 // Función helper para obtener el token del localStorage
 const getToken = (): string | null => {
   return localStorage.getItem('construplaza_token');
@@ -148,5 +192,61 @@ export const userAPI = {
     }
 
     return response.json();
+  },
+};
+
+// API de Productos
+export const productoAPI = {
+  listarProductos: async (): Promise<Producto[]> => {
+    try {
+      const response = await authenticatedFetch('/api/productos');
+      if (!response.ok) throw new Error('Error al obtener productos');
+      return await response.json();
+    } catch (error) {
+      console.error('Error en productoAPI:', error);
+      return [];
+    }
+  },
+};
+
+// API de Clientes
+export const clienteAPI = {
+  listar: async (): Promise<ClienteListResponse[]> => {
+    try {
+      const response = await authenticatedFetch('/construplaza/vendedor/clientes');
+      if (!response.ok) throw new Error('Error al obtener clientes');
+      return await response.json();
+    } catch (error) {
+      console.error('Error en clienteAPI:', error);
+      return [];
+    }
+  },
+};
+
+// API de Historial de Acciones (solo admin)
+export const historialAPI = {
+  listar: async (): Promise<HistorialAccionResponse[]> => {
+    try {
+      const response = await authenticatedFetch('/admin/usuarios/historial');
+      if (!response.ok) throw new Error('Error al obtener historial');
+      return await response.json();
+    } catch (error) {
+      console.error('Error en historialAPI:', error);
+      return [];
+    }
+  },
+};
+
+// API de Ventas del vendedor actual
+export const ventasAPI = {
+  misVentas: async (): Promise<VentaResumen[]> => {
+    try {
+      const response = await authenticatedFetch('/construplaza/vendedor/mis-ventas');
+      if (!response.ok) throw new Error('Error al obtener ventas');
+      return await response.json();
+    } catch (error) {
+      console.error('Error en ventasAPI:', error);
+      return [];
+    }
   },
 };

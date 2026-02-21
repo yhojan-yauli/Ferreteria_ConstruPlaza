@@ -1,15 +1,18 @@
 package com.ferreteria.construplaza.controller;
 
 
+import com.ferreteria.construplaza.controller.DTO.ProductoDTO;
 import com.ferreteria.construplaza.entity.Producto;
 import com.ferreteria.construplaza.entity.User;
 import com.ferreteria.construplaza.repository.UserRepository;
 import com.ferreteria.construplaza.service.ProductoService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/productos")
@@ -55,11 +58,23 @@ public class ProductoController {
     }
 
 
-    // Listar todos los productos activos
+    // Listar todos los productos activos (DTO para frontend)
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','VENDEDOR')")
-    public List<Producto> listarActivos() {
-        return productoService.listarActivos();
+    public ResponseEntity<List<ProductoDTO>> listarActivos() {
+        List<Producto> productos = productoService.listarActivos();
+        List<ProductoDTO> dtos = productos.stream().map(p -> ProductoDTO.builder()
+                .id(p.getIdProducto())
+                .nombre(p.getNombre())
+                .sku(p.getSku())
+                .marca(p.getMarca())
+                .categoria(p.getCategoria() != null ? p.getCategoria().getNombre() : null)
+                .precio(p.getPrecioVenta() != null ? p.getPrecioVenta().doubleValue() : null)
+                .stock(p.getStockActual() != null ? p.getStockActual().intValue() : null)
+                .imagen(p.getImagenUrl())
+                .build())
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     // Obtener producto por ID
