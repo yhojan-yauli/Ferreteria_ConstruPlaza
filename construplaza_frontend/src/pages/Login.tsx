@@ -97,11 +97,10 @@ const Login: React.FC = () => {
               variant="h5"
               sx={{ color: 'white', fontStyle: 'italic', mb: 2, lineHeight: 1.5 }}
             >
-              "Optimizar tu inventario y ventas de ferretería nunca ha sido tan fácil. 
-              Bienvenido al futuro de la gestión de la construcción."
+              “Construimos relaciones duraderas basadas en la confianza, porque sabemos que tu tranquilidad es tan importante como el éxito de tu proyecto.”
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-              © 2024 Construplaza Systems Inc.
+              © 2026 Construplaza Inc.
             </Typography>
           </Box>
         </Box>
