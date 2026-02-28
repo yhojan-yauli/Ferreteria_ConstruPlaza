@@ -1,5 +1,13 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+/** Rutas API (deben coincidir con @RequestMapping en backend):
+ * - /auth/login
+ * - /api/productos, /api/productos/{id}
+ * - /api/categorias
+ * - /construplaza/vendedor/clientes, /construplaza/vendedor/venta, /construplaza/vendedor/mis-ventas
+ * - /admin/usuarios/crear, /admin/usuarios/lista, /admin/usuarios/historial
+ */
+
 export interface LoginRequest {
   username: string;
   password: string;
@@ -91,6 +99,22 @@ export interface VentaResumen {
   total: number;
   metodoPago: string;
   vendedor: User;
+}
+
+/** Payload para POST /construplaza/vendedor/venta (VentaRequest) */
+export interface VentaRequestPayload {
+  tipoComprobante: 'BOLETA' | 'FACTURA';
+  metodoPago: 'EFECTIVO' | 'TARJETA' | 'YAPE' | 'PLIN';
+  montoPagado: number;
+  cliente?: {
+    anonimo: boolean;
+    tipoDocumento: string;
+    numeroDocumento: string;
+    nombres: string | null;
+    razonSocial: string | null;
+    direccion: string | null;
+  };
+  detalles: { idProducto: number; cantidad: number }[];
 }
 
 // Función helper para obtener el token del localStorage
@@ -191,9 +215,51 @@ export const userAPI = {
       throw new Error(error || 'Error al obtener usuarios');
     }
 
-    return response.json();
+    const data = await response.json();
+    return ensureArray<User>(data);
   },
 };
+
+/** Asegura que la respuesta sea un array (evita crash si el backend devuelve texto) */
+const ensureArray = <T>(data: unknown): T[] => (Array.isArray(data) ? data : []);
+
+/** Categoría del backend (GET /api/categorias) */
+export interface CategoriaBackend {
+  idCategoria: number;
+  nombre: string;
+  descripcion?: string;
+}
+
+// API de Categorías
+export const categoriaAPI = {
+  listar: async (): Promise<CategoriaBackend[]> => {
+    try {
+      const response = await authenticatedFetch('/api/categorias');
+      if (!response.ok) throw new Error('Error al obtener categorías');
+      const data = await response.json();
+      return ensureArray<CategoriaBackend>(data);
+    } catch (error) {
+      console.error('Error en categoriaAPI:', error);
+      return [];
+    }
+  },
+};
+
+/** Payload para crear/actualizar producto (campos que acepta el backend) */
+export interface ProductoPayload {
+  nombre: string;
+  sku: string;
+  marca?: string;
+  descripcion?: string;
+  precioCompra: number;
+  precioVenta: number;
+  stockActual: number;
+  stockMinimo: number;
+  unidadMedida: 'UND' | 'KG' | 'M' | 'LT';
+  categoria?: { idCategoria: number } | null;
+  imagenUrl?: string | null;
+  estado?: boolean;
+}
 
 // API de Productos
 export const productoAPI = {
@@ -201,10 +267,46 @@ export const productoAPI = {
     try {
       const response = await authenticatedFetch('/api/productos');
       if (!response.ok) throw new Error('Error al obtener productos');
-      return await response.json();
+      const data = await response.json();
+      return ensureArray<Producto>(data);
     } catch (error) {
       console.error('Error en productoAPI:', error);
       return [];
+    }
+  },
+
+  crear: async (body: ProductoPayload): Promise<void> => {
+    const response = await authenticatedFetch('/api/productos', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || 'Error al crear producto');
+    }
+  },
+
+  actualizar: async (id: number, body: ProductoPayload): Promise<void> => {
+    const response = await authenticatedFetch(`/api/productos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || 'Error al actualizar producto');
+    }
+  },
+
+  eliminar: async (id: number): Promise<void> => {
+    const response = await authenticatedFetch(`/api/productos/${id}`, { method: 'DELETE' });
+    if (response.status === 409) {
+      const data = await response.json().catch(() => ({}));
+      const msg = (data as { mensaje?: string })?.mensaje ?? 'No se puede eliminar porque tiene historial asociado.';
+      throw new Error(msg);
+    }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || 'Error al eliminar producto');
     }
   },
 };
@@ -215,7 +317,8 @@ export const clienteAPI = {
     try {
       const response = await authenticatedFetch('/construplaza/vendedor/clientes');
       if (!response.ok) throw new Error('Error al obtener clientes');
-      return await response.json();
+      const data = await response.json();
+      return ensureArray<ClienteListResponse>(data);
     } catch (error) {
       console.error('Error en clienteAPI:', error);
       return [];
@@ -229,7 +332,8 @@ export const historialAPI = {
     try {
       const response = await authenticatedFetch('/admin/usuarios/historial');
       if (!response.ok) throw new Error('Error al obtener historial');
-      return await response.json();
+      const data = await response.json();
+      return ensureArray<HistorialAccionResponse>(data);
     } catch (error) {
       console.error('Error en historialAPI:', error);
       return [];
@@ -243,10 +347,23 @@ export const ventasAPI = {
     try {
       const response = await authenticatedFetch('/construplaza/vendedor/mis-ventas');
       if (!response.ok) throw new Error('Error al obtener ventas');
-      return await response.json();
+      const data = await response.json();
+      return ensureArray<VentaResumen>(data);
     } catch (error) {
       console.error('Error en ventasAPI:', error);
       return [];
     }
+  },
+
+  registrar: async (body: VentaRequestPayload): Promise<unknown> => {
+    const response = await authenticatedFetch('/construplaza/vendedor/venta', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || 'Error al registrar la venta');
+    }
+    return response.json();
   },
 };

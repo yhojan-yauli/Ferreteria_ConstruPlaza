@@ -153,21 +153,80 @@ const Clientes: React.FC = () => {
         setFormData((prev) => ({
           ...prev,
           tipoDocumento: value === 'EMPRESA' ? 'RUC' : 'DNI',
+          numeroDocumento: '',
         }));
       }
     }
   };
 
+  const validarDocumento = (): boolean => {
+    const doc = formData.numeroDocumento.trim();
+    const tipo = formData.tipoDocumento;
+    if (!doc) return false;
+    const soloNumeros = /^\d+$/.test(doc);
+    if (!soloNumeros) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Número de documento inválido',
+        text: 'Solo debe contener dígitos numéricos.',
+        confirmButtonColor: '#1e3a5f',
+      });
+      return false;
+    }
+    if (tipo === 'DNI' && doc.length !== 8) {
+      Swal.fire({
+        icon: 'error',
+        title: 'DNI inválido',
+        text: 'El DNI debe tener exactamente 8 dígitos.',
+        confirmButtonColor: '#1e3a5f',
+      });
+      return false;
+    }
+    if (tipo === 'RUC' && doc.length !== 11) {
+      Swal.fire({
+        icon: 'error',
+        title: 'RUC inválido',
+        text: 'El RUC debe tener exactamente 11 dígitos.',
+        confirmButtonColor: '#1e3a5f',
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = () => {
-    if (!formData.nombre || !formData.numeroDocumento) {
+    const esEmpresa = formData.tipoCliente === 'EMPRESA';
+    if (esEmpresa) {
+      if (!formData.nombre?.trim()) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Ingrese la Razón Social.',
+          confirmButtonColor: '#1e3a5f',
+        });
+        return;
+      }
+    } else {
+      if (!formData.nombre?.trim() || !formData.apellido?.trim()) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Complete Nombre y Apellido.',
+          confirmButtonColor: '#1e3a5f',
+        });
+        return;
+      }
+    }
+    if (!formData.numeroDocumento?.trim()) {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Por favor complete los campos obligatorios',
+        text: 'Ingrese el número de documento.',
         confirmButtonColor: '#1e3a5f',
       });
       return;
     }
+    if (!validarDocumento()) return;
 
     if (editingCliente) {
       setClientesState((prev) =>
@@ -482,7 +541,7 @@ const Clientes: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
+              <FormControl fullWidth disabled>
                 <InputLabel>Tipo de Documento</InputLabel>
                 <Select
                   name="tipoDocumento"
@@ -490,8 +549,8 @@ const Clientes: React.FC = () => {
                   label="Tipo de Documento"
                   onChange={handleInputChange as any}
                 >
-                  <MenuItem value="DNI">DNI</MenuItem>
-                  <MenuItem value="RUC">RUC</MenuItem>
+                  <MenuItem value="DNI">DNI (8 dígitos)</MenuItem>
+                  <MenuItem value="RUC">RUC (11 dígitos)</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -505,16 +564,30 @@ const Clientes: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label={formData.tipoCliente === 'EMPRESA' ? 'Tipo de Sociedad (S.A.C., E.I.R.L., etc.)' : 'Apellido'}
-                name="apellido"
-                value={formData.apellido}
-                onChange={handleInputChange}
-                required
-              />
-            </Grid>
+            {formData.tipoCliente === 'PERSONA' && (
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Apellido"
+                  name="apellido"
+                  value={formData.apellido}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Grid>
+            )}
+            {formData.tipoCliente === 'EMPRESA' && (
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Tipo de Sociedad (opcional)"
+                  name="apellido"
+                  value={formData.apellido}
+                  onChange={handleInputChange}
+                  placeholder="S.A.C., E.I.R.L., etc."
+                />
+              </Grid>
+            )}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth

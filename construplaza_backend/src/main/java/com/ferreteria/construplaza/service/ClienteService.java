@@ -13,9 +13,22 @@ public class ClienteService {
     private final ClienteRepository clienteRepository;
     private final HistorialAccionService historialAccionService;
 
+    private void validarDocumento(String tipoDocumento, String numeroDocumento) {
+        if (numeroDocumento == null || numeroDocumento.isBlank()) return;
+        if (!numeroDocumento.matches("\\d+")) {
+            throw new IllegalArgumentException("El número de documento solo debe contener dígitos.");
+        }
+        if ("DNI".equalsIgnoreCase(tipoDocumento) && numeroDocumento.length() != 8) {
+            throw new IllegalArgumentException("El DNI debe tener exactamente 8 dígitos.");
+        }
+        if ("RUC".equalsIgnoreCase(tipoDocumento) && numeroDocumento.length() != 11) {
+            throw new IllegalArgumentException("El RUC debe tener exactamente 11 dígitos.");
+        }
+    }
+
     // ➕ CREAR CLIENTE
     public Cliente crearCliente(Cliente cliente, User usuario) {
-
+        validarDocumento(cliente.getTipoDocumento(), cliente.getNumeroDocumento());
         cliente.setAnonimo(false);
         Cliente guardado = clienteRepository.save(cliente);
 
@@ -32,7 +45,7 @@ public class ClienteService {
 
     // ✏️ EDITAR CLIENTE
     public Cliente editarCliente(Integer id, Cliente datos, User usuario) {
-
+        validarDocumento(datos.getTipoDocumento(), datos.getNumeroDocumento());
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 

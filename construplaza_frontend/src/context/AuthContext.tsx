@@ -24,9 +24,11 @@ const decodeJWT = (token: string): { username: string; role: string; exp: number
         .join('')
     );
     const decoded = JSON.parse(jsonPayload);
+    const rawRole = decoded.role || 'VENDEDOR';
+    const role = String(rawRole).replace(/^ROLE_/, '');
     return {
       username: decoded.sub,
-      role: decoded.role || 'VENDEDOR',
+      role: role || 'VENDEDOR',
       exp: decoded.exp,
     };
   } catch (error) {
@@ -76,16 +78,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     // Intentar obtener los datos completos del usuario si es admin
+    const userRole = (decoded.role || '').replace(/^ROLE_/, '') as User['role'];
     let userData: User = {
       id: 0,
       username: decoded.username,
       firstname: '',
       lastname: '',
-      role: decoded.role as User['role'],
+      role: userRole || 'VENDEDOR',
     };
 
     // Si es admin, intentar obtener los datos completos de la lista de usuarios
-    if (decoded.role === 'ADMIN') {
+    if (userRole === 'ADMIN') {
       try {
         const users = await userAPI.listUsers();
         const fullUserData = users.find((u) => u.username === decoded.username);
