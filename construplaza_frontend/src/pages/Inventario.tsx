@@ -35,8 +35,7 @@ import {
   AttachMoney,
   Warning,
 } from '@mui/icons-material';
-import { categorias } from '@/data/mockData';
-import { Producto, productoAPI } from '@/services/api';
+import { Producto, productoAPI, categoriaAPI, type CategoriaBackend, type ProductoPayload } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -47,15 +46,28 @@ const Inventario: React.FC = () => {
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('Todos');
   const [productosState, setProductosState] = useState<Producto[]>([]);
+  const [categoriasList, setCategoriasList] = useState<CategoriaBackend[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
+  const [formNombre, setFormNombre] = useState('');
+  const [formSku, setFormSku] = useState('');
+  const [formMarca, setFormMarca] = useState('');
+  const [formPrecio, setFormPrecio] = useState<string>('');
+  const [formStock, setFormStock] = useState<string>('');
+  const [formCategoriaId, setFormCategoriaId] = useState<number>(0);
+  const [formImagenUrl, setFormImagenUrl] = useState('');
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     const cargarDatos = async () => {
       setLoading(true);
-      const datosReales = await productoAPI.listarProductos();
+      const [datosReales, categorias] = await Promise.all([
+        productoAPI.listarProductos(),
+        categoriaAPI.listar(),
+      ]);
       setProductosState(datosReales);
+      setCategoriasList(categorias);
       setLoading(false);
     };
     cargarDatos();
@@ -92,6 +104,14 @@ const Inventario: React.FC = () => {
 
   const handleEdit = (producto: Producto) => {
     setEditingProduct(producto);
+    setFormNombre(producto.nombre ?? '');
+    setFormSku(producto.sku ?? '');
+    setFormMarca(producto.marca ?? '');
+    setFormPrecio(String(producto.precio ?? ''));
+    setFormStock(String(producto.stock ?? ''));
+    setFormImagenUrl(producto.imagen ?? '');
+    const catId = categoriasList.find((c) => c.nombre === (producto.categoria ?? ''))?.idCategoria ?? 0;
+    setFormCategoriaId(catId);
     setOpenDialog(true);
   };
 
@@ -105,22 +125,97 @@ const Inventario: React.FC = () => {
       cancelButtonColor: '#64748b',
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setProductosState((prev) => prev.filter((p) => p.id !== id));
+    }).then(async (result) => {
+      if (!result.isConfirmed) return;
+      try {
+        await productoAPI.eliminar(id);
+        const datosReales = await productoAPI.listarProductos();
+        setProductosState(datosReales);
         Swal.fire({
           title: '¡Eliminado!',
           text: 'El producto ha sido eliminado.',
           icon: 'success',
           confirmButtonColor: '#1e3a5f',
         });
+      } catch (err: unknown) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al eliminar',
+          text: err instanceof Error ? err.message : 'No se puede eliminar porque tiene historial asociado.',
+          confirmButtonColor: '#1e3a5f',
+        });
       }
     });
+  };
+
+  const handleOpenNuevo = () => {
+    setEditingProduct(null);
+    setFormNombre('');
+    setFormSku('');
+    setFormMarca('');
+    setFormPrecio('');
+    setFormStock('');
+    setFormCategoriaId(categoriasList[0]?.idCategoria ?? 0);
+    setFormImagenUrl('');
+    setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingProduct(null);
+  };
+
+  const handleGuardarProducto = async () => {
+    const precioNum = parseFloat(formPrecio);
+    const stockNum = parseInt(formStock, 10);
+    if (!formNombre.trim()) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Ingrese el nombre del producto.', confirmButtonColor: '#1e3a5f' });
+      return;
+    }
+    if (isNaN(precioNum) || precioNum < 0) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Precio inválido.', confirmButtonColor: '#1e3a5f' });
+      return;
+    }
+    if (isNaN(stockNum) || stockNum < 0) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Stock inválido.', confirmButtonColor: '#1e3a5f' });
+      return;
+    }
+    const payload: ProductoPayload = {
+      nombre: formNombre.trim(),
+      sku: formSku.trim() || formNombre.trim().slice(0, 10).toUpperCase(),
+      marca: formMarca.trim() || undefined,
+      precioCompra: precioNum,
+      precioVenta: precioNum,
+      stockActual: stockNum,
+      stockMinimo: Math.min(10, stockNum),
+      unidadMedida: 'UND',
+      imagenUrl: formImagenUrl.trim() || null,
+      estado: true,
+    };
+    if (formCategoriaId > 0) payload.categoria = { idCategoria: formCategoriaId };
+
+    setGuardando(true);
+    try {
+      if (editingProduct) {
+        await productoAPI.actualizar(editingProduct.id, payload);
+        Swal.fire({ icon: 'success', title: '¡Actualizado!', text: 'El producto ha sido actualizado.', confirmButtonColor: '#1e3a5f' });
+      } else {
+        await productoAPI.crear(payload);
+        Swal.fire({ icon: 'success', title: '¡Creado!', text: 'El producto ha sido creado.', confirmButtonColor: '#1e3a5f' });
+      }
+      const datosReales = await productoAPI.listarProductos();
+      setProductosState(datosReales);
+      handleCloseDialog();
+    } catch (err: unknown) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err instanceof Error ? err.message : 'No se pudo guardar.',
+        confirmButtonColor: '#1e3a5f',
+      });
+    } finally {
+      setGuardando(false);
+    }
   };
 
   return (
@@ -236,9 +331,10 @@ const Inventario: React.FC = () => {
                   label="Categoría"
                   onChange={(e) => setCategoriaFiltro(e.target.value)}
                 >
-                  {categorias.map((cat) => (
-                    <MenuItem key={cat} value={cat}>
-                      {cat === 'Todos' ? 'Todas las categorías' : cat}
+                  <MenuItem value="Todos">Todas las categorías</MenuItem>
+                  {categoriasList.map((c) => (
+                    <MenuItem key={c.idCategoria} value={c.nombre}>
+                      {c.nombre}
                     </MenuItem>
                   ))}
                 </Select>
@@ -250,7 +346,7 @@ const Inventario: React.FC = () => {
                   variant="contained"
                   fullWidth
                   startIcon={<Add />}
-                  onClick={() => setOpenDialog(true)}
+                  onClick={handleOpenNuevo}
                   sx={{
                     py: 1.5,
                     bgcolor: 'primary.main',
@@ -385,21 +481,24 @@ const Inventario: React.FC = () => {
               <TextField
                 fullWidth
                 label="Nombre del Producto"
-                defaultValue={editingProduct?.nombre || ''}
+                value={formNombre}
+                onChange={(e) => setFormNombre(e.target.value)}
               />
             </Grid>
             <Grid item xs={6}>
               <TextField
                 fullWidth
                 label="SKU"
-                defaultValue={editingProduct?.sku || ''}
+                value={formSku}
+                onChange={(e) => setFormSku(e.target.value)}
               />
             </Grid>
             <Grid item xs={6}>
               <TextField
                 fullWidth
                 label="Marca"
-                defaultValue={editingProduct?.marca || ''}
+                value={formMarca}
+                onChange={(e) => setFormMarca(e.target.value)}
               />
             </Grid>
             <Grid item xs={6}>
@@ -407,7 +506,8 @@ const Inventario: React.FC = () => {
                 fullWidth
                 label="Precio"
                 type="number"
-                defaultValue={editingProduct?.precio || ''}
+                value={formPrecio}
+                onChange={(e) => setFormPrecio(e.target.value)}
                 InputProps={{
                   startAdornment: <InputAdornment position="start">S/</InputAdornment>,
                 }}
@@ -418,7 +518,8 @@ const Inventario: React.FC = () => {
                 fullWidth
                 label="Stock"
                 type="number"
-                defaultValue={editingProduct?.stock || ''}
+                value={formStock}
+                onChange={(e) => setFormStock(e.target.value)}
               />
             </Grid>
             <Grid item xs={12}>
@@ -426,33 +527,32 @@ const Inventario: React.FC = () => {
                 <InputLabel>Categoría</InputLabel>
                 <Select
                   label="Categoría"
-                  defaultValue={editingProduct?.categoria || ''}
+                  value={formCategoriaId || ''}
+                  onChange={(e) => setFormCategoriaId(Number(e.target.value))}
                 >
-                  {categorias.filter((c) => c !== 'Todos').map((cat) => (
-                    <MenuItem key={cat} value={cat}>
-                      {cat}
+                  {categoriasList.map((c) => (
+                    <MenuItem key={c.idCategoria} value={c.idCategoria}>
+                      {c.nombre}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="URL de imagen (opcional)"
+                value={formImagenUrl}
+                onChange={(e) => setFormImagenUrl(e.target.value)}
+                placeholder="https://..."
+              />
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCloseDialog}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              handleCloseDialog();
-              Swal.fire({
-                icon: 'success',
-                title: '¡Guardado!',
-                text: 'Los cambios han sido guardados correctamente.',
-                confirmButtonColor: '#1e3a5f',
-              });
-            }}
-          >
-            Guardar
+          <Button onClick={handleCloseDialog} disabled={guardando}>Cancelar</Button>
+          <Button variant="contained" onClick={handleGuardarProducto} disabled={guardando}>
+            {guardando ? 'Guardando...' : 'Guardar'}
           </Button>
         </DialogActions>
       </Dialog>

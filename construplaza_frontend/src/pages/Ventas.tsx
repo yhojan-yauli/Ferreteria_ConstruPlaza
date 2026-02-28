@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Grid,
@@ -34,8 +34,7 @@ import {
   PersonAdd,
   Close,
 } from '@mui/icons-material';
-import { categorias } from '@/data/mockData';
-import { Producto, productoAPI } from '@/services/api';
+import { Producto, productoAPI, ventasAPI, type VentaRequestPayload } from '@/services/api';
 import Swal from 'sweetalert2';
 
 interface CartItem extends Producto {
@@ -68,6 +67,7 @@ const Ventas: React.FC = () => {
   const [ordenNumero] = useState(Math.floor(1000 + Math.random() * 9000));
   const [dialogCliente, setDialogCliente] = useState(false);
   const [clienteData, setClienteData] = useState<ClienteVenta>(clienteInicial);
+  const [imagenErrorIds, setImagenErrorIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -76,6 +76,11 @@ const Ventas: React.FC = () => {
     };
     cargarDatos();
   }, []);
+
+  const categorias = useMemo(
+    () => ['Todos', ...new Set(productos.map((p) => p.categoria).filter(Boolean) as string[])],
+    [productos]
+  );
 
   const productosFiltrados = productos.filter((p) => {
     const matchBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -135,7 +140,7 @@ const Ventas: React.FC = () => {
     setDialogCliente(true);
   };
 
-  const confirmarVenta = () => {
+  const confirmarVenta = async () => {
     if (!clienteData.anonimo) {
       if (!clienteData.numeroDocumento.trim()) {
         Swal.fire({
@@ -164,6 +169,35 @@ const Ventas: React.FC = () => {
         });
         return;
       }
+    }
+
+    const payload: VentaRequestPayload = {
+      tipoComprobante: 'BOLETA',
+      metodoPago: 'EFECTIVO',
+      montoPagado: total,
+      cliente: {
+        anonimo: clienteData.anonimo,
+        tipoDocumento: clienteData.tipoDocumento,
+        numeroDocumento: clienteData.numeroDocumento.trim(),
+        nombres: clienteData.nombres.trim() || null,
+        razonSocial: clienteData.razonSocial.trim() || null,
+        direccion: clienteData.direccion.trim() || null,
+      },
+      detalles: carrito.map((item) => ({ idProducto: item.id, cantidad: item.cantidad })),
+    };
+
+    try {
+      await ventasAPI.registrar(payload);
+      const datosReales = await productoAPI.listarProductos();
+      setProductos(datosReales);
+    } catch (err: unknown) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al registrar la venta',
+        text: err instanceof Error ? err.message : 'No se pudo conectar con el servidor.',
+        confirmButtonColor: '#1e3a5f',
+      });
+      return;
     }
 
     const itemsParaImprimir = [...carrito];
@@ -543,7 +577,7 @@ const Ventas: React.FC = () => {
                           overflow: 'hidden',
                         }}
                       >
-                        {producto.imagen ? (
+                        {producto.imagen && !imagenErrorIds.has(producto.id) ? (
                           <img
                             src={producto.imagen}
                             alt={producto.nombre}
@@ -551,6 +585,9 @@ const Ventas: React.FC = () => {
                               maxHeight: '90px',
                               maxWidth: '100%',
                               objectFit: 'contain',
+                            }}
+                            onError={() => {
+                              setImagenErrorIds((prev) => new Set(prev).add(producto.id));
                             }}
                           />
                         ) : (

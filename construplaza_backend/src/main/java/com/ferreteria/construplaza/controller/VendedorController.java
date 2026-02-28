@@ -17,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -37,7 +38,7 @@ public class VendedorController {
         List<Producto> productos = productoRepository.findByEstadoTrue();
 
         if (productos.isEmpty()) {
-            return ResponseEntity.ok("No hay productos disponibles");
+            return ResponseEntity.ok(Collections.emptyList());
         }
 
         return ResponseEntity.ok(productos);
