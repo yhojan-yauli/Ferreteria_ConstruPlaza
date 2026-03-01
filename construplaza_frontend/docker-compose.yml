@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  frontend:
+    container_name: construplaza_frontend
+    build: .
+    ports:
+      - "5173:80"
+    restart: always

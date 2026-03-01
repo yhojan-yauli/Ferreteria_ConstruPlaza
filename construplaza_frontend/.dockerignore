@@ -1,0 +1,31 @@
+# Dependencias (se instalan dentro del contenedor)
+node_modules
+
+# Build local
+dist
+
+# Git
+.git
+.gitignore
+
+# Archivos de Docker (no necesarios dentro de la imagen)
+Dockerfile
+docker-compose.yml
+docker-compose.dev.yml
+
+# Logs
+npm-debug.log
+yarn-error.log
+
+# Sistema
+.DS_Store
+
+# Tests (opcional)
+src/test
+
+# Documentación
+README.md
+
+# Configuración local
+.env
+.env.local
